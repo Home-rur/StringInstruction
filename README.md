@@ -1,2 +1,0 @@
-# StringART_Instruction
-art
