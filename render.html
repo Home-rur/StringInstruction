@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор картин из нитей</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(to right, #2c3e50, #4ca1af);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .input-section {
+            padding: 25px;
+            border-bottom: 1px solid #eee;
+            background: #f9f9f9;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .input-group {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"]:focus {
+            border-color: #4ca1af;
+            outline: none;
+        }
+        
+        button {
+            padding: 14px 24px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s, transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #4ca1af;
+            transform: translateY(-2px);
+        }
+        
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .timer-controls select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .example {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+            padding: 10px;
+            background: #eee;
+            border-radius: 4px;
+        }
+        
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .instructions-panel {
+            width: 320px;
+            border-right: 1px solid #eee;
+            padding: 20px;
+            background: #f9f9f9;
+            overflow-y: auto;
+            max-height: 700px;
+            transition: all 0.3s;
+        }
+        
+        .instructions-panel.collapsed {
+            width: 50px;
+            padding: 10px;
+            overflow: hidden;
+        }
+        
+        .instructions-panel.collapsed .step-list,
+        .instructions-panel.collapsed h2 {
+            display: none;
+        }
+        
+        .toggle-panel {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .instructions-panel h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.4rem;
+        }
+        
+        .step-list {
+            list-style: none;
+        }
+        
+        .step-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: #eee;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        
+        .step-item.active {
+            background: #2c3e50;
+            color: white;
+            border-left: 4px solid #fdbb2d;
+        }
+        
+        .step-item:hover:not(.active) {
+            background: #ddd;
+            transform: translateX(5px);
+        }
+        
+        .visualization-area {
+            flex: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            position: relative;
+        }
+        
+        .circle-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            margin-bottom: 25px;
+        }
+        
+        .circle {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #2c3e50;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            background: #fafafa;
+        }
+        
+        .point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #2c3e50;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s;
+            z-index: 20;
+        }
+        
+        .thread {
+            position: absolute;
+            background: #000;
+            height: 1px;
+            transform-origin: 0 0;
+            z-index: 5;
+            transition: opacity 0.5s;
+        }
+        
+        .thread.faded {
+            opacity: 0.3;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .controls button {
+            border-radius: 6px;
+            padding: 12px 25px;
+        }
+        
+        .controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .step-description {
+            margin-top: 25px;
+            text-align: center;
+            max-width: 550px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .current-step {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .instructions-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #eee;
+                max-height: 250px;
+            }
+            
+            .circle-container {
+                width: 350px;
+                height: 350px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .circle-container {
+                width: 280px;
+                height: 280px;
+            }
+            
+            .input-group {
+                min-width: 100%;
+            }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, #4ca1af, #2c3e50);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        .timer-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .auto-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Генератор картин из нитей</h1>
+            <p class="subtitle">240 точек, черные нити, автоматическое переключение этапов</p>
+        </header>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="numberInput" placeholder="Введите числа через запятую (например, 1,61,121,181,...)">
+                <div class="example">Пример: 1,61,121,181,241,61,121,181,1,61,121,181,241</div>
+            </div>
+            
+            <div class="timer-controls">
+                <button id="generateBtn">Сгенерировать</button>
+                <select id="speedSelect">
+                    <option value="5000">Медленная скорость</option>
+                    <option value="4000" selected>Средняя скорость</option>
+                    <option value="1500">Быстрая скорость</option>
+                    <option value="500">Очень быстрая</option>
+                </select>
+                <button id="playBtn">▶️ Воспроизвести</button>
+                <button id="pauseBtn">⏸️ Пауза</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="instructions-panel" id="instructionsPanel">
+                <button class="toggle-panel" id="togglePanel">≡</button>
+                <h2>Шаги создания</h2>
+                <ul id="stepList" class="step-list"></ul>
+            </div>
+            
+            <div class="visualization-area">
+                <div class="timer-display" id="timerDisplay">Скорость: 1 сек/шаг</div>
+                
+                <div class="circle-container">
+                    <div id="circle" class="circle"></div>
+                </div>
+                
+                <div class="step-description">
+                    <div id="currentStep" class="current-step">Шаг 0: Начало</div>
+                    <p id="stepText">Загрузите последовательность чисел для генерации инструкций. На круге отображены 240 точек, начиная с верхней.</p>
+                </div>
+                
+                <div class="controls">
+                    <button id="prevBtn" disabled>⏮️ Назад</button>
+                    <button id="nextBtn" disabled>⏭️ Вперед</button>
+                    <button id="resetBtn">↺ Сбросить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const numberInput = document.getElementById('numberInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const stepList = document.getElementById('stepList');
+            const circle = document.getElementById('circle');
+            const currentStepEl = document.getElementById('currentStep');
+            const stepText = document.getElementById('stepText');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const progress = document.getElementById('progress');
+            const instructionsPanel = document.getElementById('instructionsPanel');
+            const togglePanel = document.getElementById('togglePanel');
+            const playBtn = document.getElementById('playBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const speedSelect = document.getElementById('speedSelect');
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            let steps = [];
+            let currentStep = 0;
+            let points = [];
+            let numbers = [];
+            let autoPlayInterval = null;
+            const TOTAL_POINTS = 240;
+            
+            // Инициализация круга с 240 точками
+            function initializeCircle() {
+                circle.innerHTML = '';
+                points = [];
+                
+                for (let i = 0; i < TOTAL_POINTS; i++) {
+                    // Начинаем с верхней точки (270 градусов или -90 градусов)
+                    const angle = (i / TOTAL_POINTS) * 2 * Math.PI - Math.PI/2;
+                    const x = 0.5 + 0.45 * Math.cos(angle);
+                    const y = 0.5 + 0.45 * Math.sin(angle);
+                    
+                    const pointEl = document.createElement('div');
+                    pointEl.className = 'point';
+                    pointEl.style.left = `${x * 100}%`;
+                    pointEl.style.top = `${y * 100}%`;
+                    pointEl.dataset.number = i + 1;
+                    
+                    circle.appendChild(pointEl);
+                    
+                    points.push({
+                        x: x,
+                        y: y,
+                        number: i + 1,
+                        element: pointEl
+                    });
+                }
+            }
+            
+            // Генерация инструкций
+            generateBtn.addEventListener('click', function() {
+                const input = numberInput.value.trim();
+                if (!input) {
+                    alert('Пожалуйста, введите последовательность чисел');
+                    return;
+                }
+                
+                try {
+                    numbers = input.split(',').map(num => parseInt(num.trim()));
+                    if (numbers.some(isNaN)) {
+                        throw new Error('Все значения должны быть числами');
+                    }
+                    
+                    if (numbers.some(num => num < 1 || num > TOTAL_POINTS)) {
+                        throw new Error(`Числа должны быть в диапазоне от 1 до ${TOTAL_POINTS}`);
+                    }
+                    
+                    stopAutoPlay();
+                    generateSteps(numbers);
+                    renderStepsList();
+                    currentStep = 0;
+                    updateVisualization();
+                    updateButtons();
+                } catch (error) {
+                    alert('Ошибка: ' + error.message);
+                }
+            });
+            
+            // Навигация по шагам
+            prevBtn.addEventListener('click', function() {
+                if (currentStep > 0) {
+                    stopAutoPlay();
+                    currentStep--;
+                    updateVisualization();
+                    updateButtons();
+                }
+            });
+            
+            nextBtn.addEventListener('click', function() {
+                if (currentStep < steps.length - 1) {
+                    currentStep++;
+                    updateVisualization();
+                    updateButtons();
+                } else {
+                    stopAutoPlay();
+                }
+            });
+            
+            // Сброс
+            resetBtn.addEventListener('click', function() {
+                stopAutoPlay();
+                currentStep = 0;
+                updateVisualization();
+                updateButtons();
+            });
+            
+            // Переключение панели
+            togglePanel.addEventListener('click', function() {
+                instructionsPanel.classList.toggle('collapsed');
+            });
+            
+            // Автовоспроизведение
+            playBtn.addEventListener('click', function() {
+                startAutoPlay();
+            });
+            
+            pauseBtn.addEventListener('click', function() {
+                stopAutoPlay();
+            });
+            
+            // Изменение скорости
+            speedSelect.addEventListener('change', function() {
+                updateTimerDisplay();
+                if (autoPlayInterval) {
+                    stopAutoPlay();
+                    startAutoPlay();
+                }
+            });
+            
+            // Запуск автоматического воспроизведения
+            function startAutoPlay() {
+                stopAutoPlay();
+                const speed = parseInt(speedSelect.value);
+                autoPlayInterval = setInterval(function() {
+                    if (currentStep < steps.length - 1) {
+                        currentStep++;
+                        updateVisualization();
+                        updateButtons();
+                    } else {
+                        stopAutoPlay();
+                    }
+                }, speed);
+            }
+            
+            // Остановка автоматического воспроизведения
+            function stopAutoPlay() {
+                if (autoPlayInterval) {
+                    clearInterval(autoPlayInterval);
+                    autoPlayInterval = null;
+                }
+            }
+            
+            // Обновление отображения таймера
+            function updateTimerDisplay() {
+                const speed = parseInt(speedSelect.value);
+                let speedText = '';
+                
+                if (speed === 5000) speedText = 'Медленная';
+                else if (speed === 4000) speedText = 'Средняя';
+                else if (speed === 1500) speedText = 'Быстрая';
+                else if (speed === 500) speedText = 'Очень быстрая';
+                
+                timerDisplay.textContent = `Скорость: ${speedText}`;
+            }
+            
+            // Генерация шагов инструкции
+            function generateSteps(nums) {
+                steps = [];
+                
+                // Добавляем начальный шаг
+                steps.push({
+                    description: `Разместите ${TOTAL_POINTS} гвоздей/точек по кругу, пронумеровав их от 1 до ${TOTAL_POINTS}. Начальная точка находится сверху.`,
+                    connections: []
+                });
+                
+                // Генерируем шаги для каждой нити
+                for (let i = 0; i < nums.length - 1; i++) {
+                    const from = nums[i];
+                    const to = nums[i + 1];
+                    
+                    steps.push({
+                        description: `Проведите черную нить от точки ${from} к точке ${to}.`,
+                        connections: [...steps[steps.length - 1].connections, { from, to }]
+                    });
+                }
+                
+                // Добавляем финальный шаг
+                steps.push({
+                    description: `Готово! Вы создали картину из нитей с ${nums.length - 1} соединениями.`,
+                    connections: steps[steps.length - 1].connections
+                });
+            }
+            
+            // Отображение списка шагов
+            function renderStepsList() {
+                stepList.innerHTML = '';
+                steps.forEach((step, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'step-item' + (index === currentStep ? ' active' : '');
+                    li.textContent = `Шаг ${index}: ${step.description.substring(0, 50)}...`;
+                    li.addEventListener('click', () => {
+                        stopAutoPlay();
+                        currentStep = index;
+                        updateVisualization();
+                        updateButtons();
+                    });
+                    stepList.appendChild(li);
+                });
+            }
+            
+            // Обновление визуализации
+            function updateVisualization() {
+                // Очищаем предыдущие нити
+                const threads = circle.querySelectorAll('.thread');
+                threads.forEach(thread => thread.remove());
+                
+                // Добавляем связи (нити) для текущего шага
+                if (currentStep > 0) {
+                    const connections = steps[currentStep].connections;
+                    
+                    // Делаем предыдущие нити полупрозрачными
+                    if (connections.length > 1) {
+                        for (let i = 0; i < connections.length - 1; i++) {
+                            const conn = connections[i];
+                            const fromPoint = points[conn.from - 1];
+                            const toPoint = points[conn.to - 1];
+                            
+                            const dx = toPoint.x - fromPoint.x;
+                            const dy = toPoint.y - fromPoint.y;
+                            const length = Math.sqrt(dx * dx + dy * dy);
+                            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                            
+                            const thread = document.createElement('div');
+                            thread.className = 'thread faded';
+                            thread.style.left = `${fromPoint.x * 100}%`;
+                            thread.style.top = `${fromPoint.y * 100}%`;
+                            thread.style.width = `${length * 100}%`;
+                            thread.style.transform = `rotate(${angle}deg)`;
+                            
+                            circle.appendChild(thread);
+                        }
+                    }
+                    
+                    // Добавляем текущую нить
+                    if (connections.length > 0) {
+                        const currentConn = connections[connections.length - 1];
+                        const fromPoint = points[currentConn.from - 1];
+                        const toPoint = points[currentConn.to - 1];
+                        
+                        const dx = toPoint.x - fromPoint.x;
+                        const dy = toPoint.y - fromPoint.y;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        const thread = document.createElement('div');
+                        thread.className = 'thread';
+                        thread.style.left = `${fromPoint.x * 100}%`;
+                        thread.style.top = `${fromPoint.y * 100}%`;
+                        thread.style.width = `${length * 100}%`;
+                        thread.style.transform = `rotate(${angle}deg)`;
+                        
+                        circle.appendChild(thread);
+                    }
+                }
+                
+                // Обновляем текстовое описание
+                currentStepEl.textContent = `Шаг ${currentStep}`;
+                stepText.textContent = steps[currentStep].description;
+                
+                // Обновляем активный элемент в списке
+                const stepItems = stepList.querySelectorAll('.step-item');
+                stepItems.forEach((item, index) => {
+                    item.classList.toggle('active', index === currentStep);
+                });
+                
+                // Обновляем прогресс
+                const progressPercent = (currentStep / (steps.length - 1)) * 100;
+                progress.style.width = `${progressPercent}%`;
+            }
+            
+            // Обновление состояния кнопок
+            function updateButtons() {
+                prevBtn.disabled = currentStep === 0;
+                nextBtn.disabled = currentStep === steps.length - 1;
+            }
+            
+            // Инициализация круга при загрузке
+            initializeCircle();
+            updateTimerDisplay();
+            
+            // Пример по умолчанию
+            numberInput.value = "";
+        });
+    </script>
+</body>
+</html>
